@@ -1,3 +1,0 @@
-/Users/irislitiu/work/Strava-analysis/build/CMakeFiles/Strava-analysis.dir
-/Users/irislitiu/work/Strava-analysis/build/CMakeFiles/edit_cache.dir
-/Users/irislitiu/work/Strava-analysis/build/CMakeFiles/rebuild_cache.dir
