@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/Users/irislitiu/work/Strava-analysis/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/irislitiu/work/Strava-analysis/src -I/Users/irislitiu/work/Strava-analysis/external -I/Users/irislitiu/work/Strava-analysis/external/nlohmann -I/Users/irislitiu/work/Strava-analysis/external/plog/include -isystem /opt/local/libexec/openssl3/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.5.sdk -std=gnu++2b -o CMakeFiles/Strava-analysis.dir/src/main.cpp.o -c /Users/irislitiu/work/Strava-analysis/src/main.cpp",
+  "file": "/Users/irislitiu/work/Strava-analysis/src/main.cpp"
+},
+{
+  "directory": "/Users/irislitiu/work/Strava-analysis/build",
+  "command": "/Library/Developer/CommandLineTools/usr/bin/c++  -I/Users/irislitiu/work/Strava-analysis/src -I/Users/irislitiu/work/Strava-analysis/external -I/Users/irislitiu/work/Strava-analysis/external/nlohmann -I/Users/irislitiu/work/Strava-analysis/external/plog/include -isystem /opt/local/libexec/openssl3/include -g -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX15.5.sdk -std=gnu++2b -o CMakeFiles/Strava-analysis.dir/src/utils.cpp.o -c /Users/irislitiu/work/Strava-analysis/src/utils.cpp",
+  "file": "/Users/irislitiu/work/Strava-analysis/src/utils.cpp"
+}
+]
