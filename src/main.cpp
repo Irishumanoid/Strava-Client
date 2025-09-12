@@ -5,6 +5,7 @@
 #include <plog/Initializers/RollingFileInitializer.h>
 
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <cstdlib> 
 #include <string>
@@ -31,19 +32,28 @@ std::optional<json> makeRequest(httplib::Client& client, httplib::Headers& heade
     return {};
 }
 
-void getAthleteStats(httplib::Client& client, httplib::Headers& headers) {
-    std::ifstream inFile("strava_tokens.json");
-    if (inFile) {
-        json j;
-        inFile >> j;
-        std::string id {std::to_string(j["athlete"]["id"].get<long>())};
-        std::string endpoint = {std::format("/api/v3/athletes/{}/stats", id)};
-        makeRequest(client, headers, endpoint, true);
+
+void callEndpoint(httplib::Client& client, httplib::Headers& headers, const std::string& endpoint, const std::string& outPath, bool verbose) {
+    auto out = makeRequest(client, headers, endpoint, verbose);
+    std::ofstream outFile(outPath);
+    if (outFile.is_open()) {
+        json j = *out;
+        outFile << j.dump(2);
+        outFile.close();
     }
 }
 
-//TODO write summary at top of json with total #activities and # for each sport_type; write to file
-void athleteActivitiesToJson(httplib::Client& client, httplib::Headers& headers, int numPerPage=200, std::optional<int> pageLimit=std::nullopt) {
+void getAthlete(httplib::Client& client, httplib::Headers& headers, const std::string& outPath, bool verbose) {
+    std::string endpoint = "/api/v3/athlete";
+    callEndpoint(client, headers, endpoint, outPath, verbose);
+}
+
+void getAthleteStats(httplib::Client& client, httplib::Headers& headers, std::string_view athleteId, const std::string& outPath, bool verbose) {
+    std::string endpoint = {std::format("/api/v3/athletes/{}/stats", athleteId)};
+    callEndpoint(client, headers, endpoint, outPath, verbose);
+}
+
+void getAthleteActivities(httplib::Client& client, httplib::Headers& headers, int numPerPage=200, std::optional<int> pageLimit=std::nullopt) {
     int totalNumActivities {}, curPage {1};
     std::map<std::string, int> activities;
 
@@ -97,11 +107,10 @@ int main(int, char**){
     httplib::Headers headers = {
         {"Authorization", accessToken}
     };
-    athleteActivitiesToJson(client, headers);*/
-
-    RouteUtils::PolylineManager poly {};
-    std::ifstream inFile("activity_data_iris.json");
-    json data;
-    inFile >> data;
-    poly.parsePolylineData(data["data"][0]["map"]["summary_polyline"], true);
+    
+    getAthlete(client, headers, "json_data/athlete_data_iris.json", true);*/
+    std::cout << std::boolalpha;
+    std::string p1 {"yttaHvoviV@aDCkDBYIkDGUMKiBDQEEcD@uAF{ACsBEQQYWK[AqDDKSGEs@E}@F_@GSDkDxBo@j@aA^o@Lw@H[H[?_@MU?aCDqCG{A@u@Hc@OUO{EmAqAOiBAqE@gBBeBCuABWHc@DuAZaBt@m@NmAh@eCvASPSLUFgDhBIFe@f@kAn@k@LiBx@gAn@iGhFw@x@Y`@[p@o@nBCXFl@AH}BdIMr@m@tAAN_@jAm@jAq@|@]X_@P[@qAAs@Dq@GkCB_EAUAKEGKE]?_CjA_PZ}C\\}Ej@}FCQJ_@BBACOF_@Dk@A}@@@?ACKE}FGs@@yAEcGGw@Co@BiBCe@Co@?m@Ia@Cu@@cBA[E}@?aBEe@Bw@AW?c@Gc@@kBGcBGeCFoAQ}@?s@Cg@Em@@q@GaBDoAImACe@EQIeCqAiCkA}DmBsAq@A?D@_B}@a@MkBIgHCcF?gACoBYS?]CKZKHK?cAIoCCc@K]So@m@IMAYGCQg@]eBSwAU{@Sg@m@sAyMuPcC{EkAwAs@k@]OoGwAiAs@s@oAYaAGc@ImADcEPyF?_ACw@OoBa@_Bw@sAkAgAu@UMKCKBMX]x@e@r@g@`DuCxAiAlCcCjDwCl@m@HOBYGmEEe@Ak@Dw@FmCK_GMiANw@BoBGiBGsAKw@EiABgBH_BB_BJwB@sAB]AgE?cAD_ACcFC}@Be@AyPDaBAmA?iHB_AHmAEa@CaAAgEIwD@WDYBk@BK?i@KmB"};
+    std::string p2 {"yvuaHxwviVODML_@A_@Fe@K]Aq@Kc@CwABUQe@SMCiAGQMSEu@k@EAc@JUCmA^e@BCBo@x@U`@WhAE\\a@t@O`@s@~@]D}@My@NUKYWIa@W_@[WYAOWEAKBeAFiAP}@HiAFe@?ODI`@CzCY`@UDq@Ms@Da@?{@BkA?kB@UD_@VQ`@C^BrBId@Ch@Dh@Nt@l@|@`@^`@d@Dp@@v@Fz@C|EEl@Wd@a@Te@\\[h@a@b@[l@u@fAa@f@Af@BH@dBCt@@|EAt@H~BRd@^`@hAv@Z`@|BtBTVXPDHCj@DLFr@G`CBpAEfAIZSV]n@m@vAaAdAWf@a@h@a@XQRc@p@]Rc@Cc@Io@Fi@?ME[E}@Du@RKz@Dd@AVDZEX@Z?xEAtAG`@@zAF`AKj@WLe@Hm@B{BDw@Ac@CKF?Ce@BgAAm@\\_@n@Kn@A~@ANFbB?|@Lv@Vd@b@N`BANHxAH\\C`@OPAVDh@@ZBnAG^@LFr@[VAr@Jd@Kd@Ah@BLCd@Hb@Bz@Kf@@nA?|AH\\JPJXAb@NZE\\B|@Lj@Av@D|@Gb@KDDLBPJVD\\C~BCn@E\\@d@FXEf@@h@C\\BXFj@G`@BnBGdCRh@I`CDb@Ed@?`@Gx@@v@Hd@ERSz@cA|BsBVa@\\_@d@UTQv@}@t@e@`AcALEn@?h@i@ZFHNvA_B`@s@Ay@NcALk@Js@b@u@JiBVu@Jg@d@g@LGL]Gi@J]B_AU}A?EKq@?QBe@Gq@@g@FUBQFEBWEUEi@@w@Cm@@QEWDaAEu@EoAKs@Hm@B_@Kq@FaCLY^_@h@Q^QHwALk@Ve@^Qb@KL?VXGW?[Fi@@}@BYOq@Fe@"};
+    std::cout << RouteUtils::areRoutesSame(p1, p2, true);
 }
