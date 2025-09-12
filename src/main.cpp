@@ -71,13 +71,13 @@ void getAthleteActivities(httplib::Client& client, httplib::Headers& headers, in
             json j = *out;
             if (j.empty()) break;
 
-            curPage++;
+            ++curPage;
             totalNumActivities += j.size();
             if (j.is_array()) {
                 for (const auto& activity : j) {
                     activityData.push_back(activity);
                     std::string type {activity["sport_type"].get<std::string>()};
-                    activities[type]++;
+                    ++activities[type];
                 }
             }
         }
@@ -111,6 +111,6 @@ int main(int, char**){
     getAthlete(client, headers, "json_data/athlete_data_iris.json", true);*/
     std::cout << std::boolalpha;
     std::string p1 {"yttaHvoviV@aDCkDBYIkDGUMKiBDQEEcD@uAF{ACsBEQQYWK[AqDDKSGEs@E}@F_@GSDkDxBo@j@aA^o@Lw@H[H[?_@MU?aCDqCG{A@u@Hc@OUO{EmAqAOiBAqE@gBBeBCuABWHc@DuAZaBt@m@NmAh@eCvASPSLUFgDhBIFe@f@kAn@k@LiBx@gAn@iGhFw@x@Y`@[p@o@nBCXFl@AH}BdIMr@m@tAAN_@jAm@jAq@|@]X_@P[@qAAs@Dq@GkCB_EAUAKEGKE]?_CjA_PZ}C\\}Ej@}FCQJ_@BBACOF_@Dk@A}@@@?ACKE}FGs@@yAEcGGw@Co@BiBCe@Co@?m@Ia@Cu@@cBA[E}@?aBEe@Bw@AW?c@Gc@@kBGcBGeCFoAQ}@?s@Cg@Em@@q@GaBDoAImACe@EQIeCqAiCkA}DmBsAq@A?D@_B}@a@MkBIgHCcF?gACoBYS?]CKZKHK?cAIoCCc@K]So@m@IMAYGCQg@]eBSwAU{@Sg@m@sAyMuPcC{EkAwAs@k@]OoGwAiAs@s@oAYaAGc@ImADcEPyF?_ACw@OoBa@_Bw@sAkAgAu@UMKCKBMX]x@e@r@g@`DuCxAiAlCcCjDwCl@m@HOBYGmEEe@Ak@Dw@FmCK_GMiANw@BoBGiBGsAKw@EiABgBH_BB_BJwB@sAB]AgE?cAD_ACcFC}@Be@AyPDaBAmA?iHB_AHmAEa@CaAAgEIwD@WDYBk@BK?i@KmB"};
-    std::string p2 {"yvuaHxwviVODML_@A_@Fe@K]Aq@Kc@CwABUQe@SMCiAGQMSEu@k@EAc@JUCmA^e@BCBo@x@U`@WhAE\\a@t@O`@s@~@]D}@My@NUKYWIa@W_@[WYAOWEAKBeAFiAP}@HiAFe@?ODI`@CzCY`@UDq@Ms@Da@?{@BkA?kB@UD_@VQ`@C^BrBId@Ch@Dh@Nt@l@|@`@^`@d@Dp@@v@Fz@C|EEl@Wd@a@Te@\\[h@a@b@[l@u@fAa@f@Af@BH@dBCt@@|EAt@H~BRd@^`@hAv@Z`@|BtBTVXPDHCj@DLFr@G`CBpAEfAIZSV]n@m@vAaAdAWf@a@h@a@XQRc@p@]Rc@Cc@Io@Fi@?ME[E}@Du@RKz@Dd@AVDZEX@Z?xEAtAG`@@zAF`AKj@WLe@Hm@B{BDw@Ac@CKF?Ce@BgAAm@\\_@n@Kn@A~@ANFbB?|@Lv@Vd@b@N`BANHxAH\\C`@OPAVDh@@ZBnAG^@LFr@[VAr@Jd@Kd@Ah@BLCd@Hb@Bz@Kf@@nA?|AH\\JPJXAb@NZE\\B|@Lj@Av@D|@Gb@KDDLBPJVD\\C~BCn@E\\@d@FXEf@@h@C\\BXFj@G`@BnBGdCRh@I`CDb@Ed@?`@Gx@@v@Hd@ERSz@cA|BsBVa@\\_@d@UTQv@}@t@e@`AcALEn@?h@i@ZFHNvA_B`@s@Ay@NcALk@Js@b@u@JiBVu@Jg@d@g@LGL]Gi@J]B_AU}A?EKq@?QBe@Gq@@g@FUBQFEBWEUEi@@w@Cm@@QEWDaAEu@EoAKs@Hm@B_@Kq@FaCLY^_@h@Q^QHwALk@Ve@^Qb@KL?VXGW?[Fi@@}@BYOq@Fe@"};
+    std::string p2 {"mttaHnqviVEmB?cNE[KO_B?a@IOuEFyBG}B[[qECi@KUUyAR_@GiDrB}@v@aAd@uCb@}@YwIB}AL}@k@gEmAwAOyQH_Dx@}DxA{DdCg@NqDtBW\\eAr@s@NgDxA_IvG_AzA}@hCH`As@vBm@tCqBtGa@`AeBnBuARcOOQi@AsAHeBhCw[d@aEfAyLXuAx@aCjAiCbAyAHk@@qPH}@McADaDGg@k@kAg@[yAy@}OyHsHgLuAaBgEyDwAaBqAmBi@yAg@yBUqCkBaPMk@Q{BIcEJkBhAwHHQbA{It@aD`@oDbAaDt@_AZ}@LCTaBTo@fBoDtF}NpAqCj@iBZkBMwADcA[kBh@q@h@sBVe@[yBJw@VYXKvF|@jEDfAR|CB~@[r@CdD?hBHiA@_@OGUBqOVkAJcBKuI]gLKwJJeGVsHx@gQp@w]\\oMVgFt@gIxEca@`TmgCpCa^pAwNDaBDC`C{UFcCN}AJo@Vm@p@cF|BoTn@qHv@aLHqBC_KO{@s@uBCm@TgCAq@Mm@w@{CcBqE_DkF_EaGqB{D{@aCgCwJuAmHm@IEMEq@eCgPcAaEmBwJc@oC_@{EOmDEwDLmEn@sID{AOcGBsANiCQKHd@@j@MjC@zCJlBW`I_@hFCpCDzDLlCNzBd@nDpBrJdAvFlB|L`@hBv@nD^v@fDzLrAzDpB`EpI|MlArCfArD`@~BAj@UpB@j@x@vCFh@IrNkAtPkAlLy@xFa@xE]|BNr@l@l@w@q@U^SdAO`BKpCiB~OqBfUoGrx@sO`jBuAnMyCfVaAzLs@`Y]tSM`Eu@fMYlK?|Ln@jXEbCI~@Yx@YZA|NCJ[BoBCyAb@s@FgCE_BWaDAkC[mBc@[PYz@Bj@V|AgArCi@v@^bBAvAJhAGj@{AzEsI~S{@|A[|@]bBg@fAc@h@e@|@{@nDW|Ci@rCaAvHUp@ObAGdAe@lDKlDLvDlA|IlApLXvAx@zBnBhCfInIfIzLtCnA~NrHTX\\hAHn@IjAFlBK|ACtED~IGVsBrDw@hBm@vBSdAw@|IKfDYhBuAnQHXPJfAVALUDaACYTs@rGJ`BNh@LNlDErGNxBORM`BuB~@kCtDaNKs@FWp@kBl@mAzF{ErCsBtBaAnAUbBoAtDsBtEqCxEcBzBUzKQjCBvC^jD~@|@h@fBQtKPjAKxAc@lG{DrBGd@v@b@JhECLLBXB~AKfCAvFRPxB@ZRBzAEdH"};
     std::cout << RouteUtils::areRoutesSame(p1, p2, true);
 }
