@@ -13,6 +13,7 @@
 #include <map>
 
 #include <utils.h>
+#include <route_analysis/route_utils.h>
 
 using json = nlohmann::json;
 
@@ -42,14 +43,18 @@ void getAthleteStats(httplib::Client& client, httplib::Headers& headers) {
 }
 
 //TODO write summary at top of json with total #activities and # for each sport_type; write to file
-void athleteActivitiesToJson(httplib::Client& client, httplib::Headers& headers) {
+void athleteActivitiesToJson(httplib::Client& client, httplib::Headers& headers, int numPerPage=200, std::optional<int> pageLimit=std::nullopt) {
     int totalNumActivities {}, curPage {1};
-    int numPerPage {50};
     std::map<std::string, int> activities;
 
-    while (true) {
-        if (curPage == 3) break; //temp for debug to avoid looking at all activities
+    int limit {};
+    if (pageLimit) {
+        limit = *pageLimit;
+    }
 
+    json activityData {json::array()};
+    while (true) {
+        if (limit == curPage) break;
         std::string endpoint {std::format("/api/v3/athlete/activities?per_page={}&page={}", numPerPage, curPage)};
         auto out = makeRequest(client, headers, endpoint, true);
         if (out) {
@@ -60,16 +65,25 @@ void athleteActivitiesToJson(httplib::Client& client, httplib::Headers& headers)
             totalNumActivities += j.size();
             if (j.is_array()) {
                 for (const auto& activity : j) {
+                    activityData.push_back(activity);
                     std::string type {activity["sport_type"].get<std::string>()};
                     activities[type]++;
                 }
             }
         }
     }
-
+    json summary;
+    summary["sports"] = {};
     std::cout << "total num activities: " << totalNumActivities;
     for (const auto &[sport, count] : activities) {
-        std::cout << "sport: " << sport << " has activity count: " << count;
+        summary["sports"][sport] = count;
+        std::cout << "sport: " << sport << " has activity count: " << count << '\n';
+    }
+    summary["data"] = activityData;
+    std::ofstream outFile("activity_data.json");
+    if (outFile.is_open()) {
+        outFile << summary.dump(2);
+        outFile.close();
     }
 }
 
@@ -77,11 +91,17 @@ int main(int, char**){
     plog::init(plog::debug, "Logfile.txt");
     PLOGD << "main called";
 
-    httplib::Client client("https://www.strava.com");
+    /*httplib::Client client("https://www.strava.com");
     std::string accessToken {getValidAccessToken(client)};
 
     httplib::Headers headers = {
         {"Authorization", accessToken}
     };
-    athleteActivitiesToJson(client, headers);
+    athleteActivitiesToJson(client, headers);*/
+
+    RouteUtils::PolylineManager poly {};
+    std::ifstream inFile("activity_data_iris.json");
+    json data;
+    inFile >> data;
+    poly.parsePolylineData(data["data"][0]["map"]["summary_polyline"], true);
 }

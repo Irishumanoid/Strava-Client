@@ -16,6 +16,7 @@ find_package(OpenSSL REQUIRED)
 add_executable(Strava-analysis
     src/main.cpp
     src/utils.cpp
+    src/route_analysis/route_utils.cpp
 )
 
 target_link_libraries(Strava-analysis PRIVATE OpenSSL::SSL OpenSSL::Crypto)
