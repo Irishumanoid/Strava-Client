@@ -97,8 +97,6 @@ void getAthleteActivities(httplib::Client& client, httplib::Headers& headers, in
     }
 }
 
-
-// TODO: test and move into route_utils
 /** Gets distinct routes from json of all user activities */
 std::optional<json> getRoutes(const std::string& path) {
     std::ifstream inFile(path);
@@ -109,43 +107,49 @@ std::optional<json> getRoutes(const std::string& path) {
         inFile.close();
         PLOGD << "test";
 
-        if (j["data"].is_array()) {
-            PLOGD << "read file";
-            std::map<std::string, json> sportRoutes;
-            for (const auto& activity : j["data"]) {
+    if (j["data"].is_array()) {
+        PLOGD << "read file";
+        std::map<std::string, json> sportRoutes;
+
+        for (const auto& activity : j["data"]) {
+            if (activity.contains("map") && activity["map"].contains("summary_polyline")) {
                 std::string sport = activity["sport_type"];
                 std::string polyline = activity["map"]["summary_polyline"];
                 PLOGD << "found activity of type: " << sport;
-    
-                if (sportRoutes[sport].empty()) {
-                    sportRoutes[sport] = json::array();
-                    sportRoutes[sport].push_back({
-                        {"ids", json::array({activity["id"]})}, 
-                        {"polyline", polyline}});
 
-                } else {
-                    // check polyline similarity for each activity in corresponding sport's json
-                    for (const auto& other : sportRoutes[sport]) {
-                        std::string otherPolyline = other["polyline"]; 
-                        if (RouteUtils::areRoutesSame(polyline, otherPolyline)) {
-                            PLOGD << "same routes found";
-                            sportRoutes[sport]["ids"].push_back(activity["id"]);
-                            break;
-                        } else {
-                            PLOGD << "distinct routes found";
-                            sportRoutes[sport].push_back({
-                                {"ids", {activity["id"]}},
-                                {"polyline", polyline}});
-                        }
+                if (!sportRoutes.contains(sport)) {
+                    sportRoutes[sport] = json::array();
+                }
+
+                bool matched = false;
+                for (auto& routeObj : sportRoutes[sport]) {
+                    std::string otherPolyline = routeObj["polyline"];
+                    if (RouteUtils::areRoutesSame(polyline, otherPolyline)) {
+                        PLOGD << "same routes found";
+                        routeObj["ids"].push_back(activity["id"]);
+                        matched = true;
+                        break; // no other matches will exist, since all same polylines will have ids in the same sub-json
                     }
                 }
+
+                if (!matched) {
+                    PLOGD << "distinct routes found";
+                    sportRoutes[sport].push_back({
+                        {"ids", json::array({activity["id"]})},
+                        {"polyline", polyline}
+                    });
+                }
+            } else {
+                PLOGD << "some json fields missing for activity: " << activity;
             }
-            json out;
-            for (const auto& [sport, data] : sportRoutes) {
-                out[sport] = data;
-            }
-            return out;
         }
+
+        json out;
+        for (const auto& [sport, data] : sportRoutes) {
+            out[sport] = data;
+        }
+        return out;
+    }
 
     }
     return {};
