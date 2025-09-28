@@ -1,12 +1,18 @@
 #include <polylineencoder.h>
 #include "route_utils.h"
+#include <nlohmann/json.hpp>
+#include <plog/Log.h>
+#include <plog/Initializers/RollingFileInitializer.h>
 
 #include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <cmath>
 #include <numbers>
 #include <algorithm>
 #include <vector>
 #include <tuple>
+
 
 namespace RouteUtils {
     using Point = gepaf::PolylineEncoder<>::Point;
@@ -24,6 +30,7 @@ namespace RouteUtils {
     double degToRad(double deg) {
         return deg * std::numbers::pi / 180.0;
     }
+
 
     // Haversine distance in kilometers
     double getDistance(const Point& first, const Point& second) {
@@ -44,6 +51,7 @@ namespace RouteUtils {
         const double c = 2.0 * std::atan2(std::sqrt(a), std::sqrt(1.0 - a));
         return R_km * c; 
     }
+
 
     bool areRoutesSame(const std::string& first, const std::string& second, bool verbose, double threshold) {
         auto parsedFirst = parsePolylineData(first, verbose);
@@ -131,5 +139,130 @@ namespace RouteUtils {
         }
 
         return score >= threshold;
+    }
+
+
+    /** Gets distinct routes from json of all user activities */
+    std::optional<json> getRoutes(const std::string& path) {
+        std::ifstream inFile(path);
+        PLOGD << "getRoutes called";
+        if (inFile) {
+            json j;
+            inFile >> j;
+            inFile.close();
+
+        if (j["data"].is_array()) {
+            std::map<std::string, json> sportRoutes;
+
+            for (const auto& activity : j["data"]) {
+                if (activity.contains("map") && activity["map"].contains("summary_polyline")) {
+                    std::string sport = activity["sport_type"];
+                    std::string polyline = activity["map"]["summary_polyline"];
+
+                    if (!sportRoutes.contains(sport)) {
+                        PLOGD << "found data for sport: " << sport;
+                        sportRoutes[sport] = json::array();
+                    }
+
+                    bool matched = false;
+                    for (auto& routeObj : sportRoutes[sport]) {
+                        std::string otherPolyline = routeObj["polyline"];
+                        if (RouteUtils::areRoutesSame(polyline, otherPolyline)) {
+                            PLOGD << "same routes found";
+                            routeObj["ids"].push_back(activity["id"]);
+                            matched = true;
+                            break; // no other matches will exist, since all same polylines will have ids in the same sub-json
+                        }
+                    }
+
+                    if (!matched) {
+                        PLOGD << "distinct routes found";
+                        sportRoutes[sport].push_back({
+                            {"ids", json::array({activity["id"]})},
+                            {"polyline", polyline}
+                        });
+                    }
+                } else {
+                    PLOGD << "some json fields missing for activity: " << activity;
+                }
+            }
+
+            json out;
+            for (const auto& [sport, data] : sportRoutes) {
+                out[sport] = data;
+            }
+            return out;
+        }
+
+        }
+        return {};
+    }
+
+    std::optional<json> getAvgActivityData(const std::string& path, std::vector<std::string> ids) {
+        PLOGD << "called getAvgActivityData";
+        std::ifstream inFile(path);
+        if (inFile) {
+            json j;
+            inFile >> j;
+            inFile.close();
+            
+            std::array<std::string, 8> metrics = 
+                {"average_cadence", "average_heartrate", "average_speed", "elev_high", 
+                    "elev_low", "max_heartrate", "max_speed", "total_elevation_gain"};
+            json avgStats {};
+            for (const std::string& metric : metrics) {
+                PLOGD << "init metric " << metric;
+                avgStats[metric] = 0;
+            }
+
+            for (const auto& activity : j["data"]) {
+                for (const std::string& id : ids) {
+                    PLOGD << "id is: " << id;
+                    if (activity["id"].get<std::string>() == id) {
+                        PLOGD << "found id matching activity";
+                        for (const std::string& metric : metrics) {
+                            if (activity.contains(metric) && activity[metric].is_number()) {
+                                avgStats[metric] = avgStats[metric].get<double>() + activity[metric].get<double>();
+                            }                        
+                        }
+                    }
+                }
+            }
+            for (const std::string& metric : metrics) {
+                avgStats[metric] = avgStats[metric].get<double>() / ids.size();
+            }
+            return avgStats;
+        }
+        return {};
+    }
+
+    //write to json with average route metrics (polyline and 
+    // stats: average_cadence, average_heartrate, average_speed, elev_high, elev_low, max_heartrate, max_speed, total_elevation_gain)
+    std::optional<json> getAvgRouteStats(const std::string& path, const std::string& activityPath) {
+        std::ifstream inFile(activityPath);
+        if (inFile) {
+            json j;
+            inFile >> j;
+            inFile.close();
+
+            json routes = json::array();
+            for (json::iterator sport = j.begin(); sport != j.end(); ++sport) {
+                for (const json& route : sport.value()) {
+                    json ids = route["ids"];
+                    std::vector<std::string> newIds;
+                    for (const auto& id : ids) {
+                        newIds.push_back(std::to_string(id.get<long long>()));
+                    }
+
+                    auto stats = getAvgActivityData(activityPath, newIds);
+                    if (!stats) continue;
+                    json jStats = *stats;
+                    jStats["polyline"] = route["polyline"];
+                    routes.push_back(jStats);
+                }
+            }
+            return routes;
+        }
+        return {};
     }
 }
