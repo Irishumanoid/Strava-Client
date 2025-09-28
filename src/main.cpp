@@ -116,10 +116,12 @@ int main(int, char**){
     std::ofstream outFile ("test_distinct_routes.json");
     outFile << out.dump(2);
     outFile.close();*/
-    auto routes = RouteUtils::getAvgRouteStats("activity_data_iris.json", "test_distinct_routes.json");
+
+    auto routes = RouteUtils::getAvgRouteStats("test_distinct_routes.json", "json_data/activity_data_iris.json");
     if (routes) {
         json rJson = *routes;
         std::ofstream out {"avg_route_data_iris.json"};
-        out << rJson;
+        out << rJson.dump(2);
+        out.close();
     }
 }

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <vector>
 #include <tuple>
+#include <unordered_set>
 
 
 namespace RouteUtils {
@@ -201,7 +202,7 @@ namespace RouteUtils {
     std::optional<json> getAvgActivityData(const std::string& path, std::vector<std::string> ids) {
         PLOGD << "called getAvgActivityData";
         std::ifstream inFile(path);
-        if (inFile) {
+        if (inFile) { 
             json j;
             inFile >> j;
             inFile.close();
@@ -211,25 +212,28 @@ namespace RouteUtils {
                     "elev_low", "max_heartrate", "max_speed", "total_elevation_gain"};
             json avgStats {};
             for (const std::string& metric : metrics) {
-                PLOGD << "init metric " << metric;
                 avgStats[metric] = 0;
             }
 
+            std::unordered_set<std::string> idSet(ids.begin(), ids.end());
+            int matchedCount = 0;
             for (const auto& activity : j["data"]) {
-                for (const std::string& id : ids) {
-                    PLOGD << "id is: " << id;
-                    if (activity["id"].get<std::string>() == id) {
-                        PLOGD << "found id matching activity";
-                        for (const std::string& metric : metrics) {
-                            if (activity.contains(metric) && activity[metric].is_number()) {
-                                avgStats[metric] = avgStats[metric].get<double>() + activity[metric].get<double>();
-                            }                        
-                        }
+                auto activityId = std::to_string(activity["id"].get<long long>());
+
+                if (idSet.contains(activityId)) {
+                    ++matchedCount;
+                    for (const std::string& metric : metrics) {
+                        if (activity.contains(metric) && activity[metric].is_number()) {
+                            avgStats[metric] = avgStats[metric].get<double>() + activity[metric].get<double>();
+                        }                        
                     }
                 }
             }
+
             for (const std::string& metric : metrics) {
-                avgStats[metric] = avgStats[metric].get<double>() / ids.size();
+                if (matchedCount > 0) {
+                    avgStats[metric] = avgStats[metric].get<double>() / matchedCount;
+                }
             }
             return avgStats;
         }
@@ -238,8 +242,8 @@ namespace RouteUtils {
 
     //write to json with average route metrics (polyline and 
     // stats: average_cadence, average_heartrate, average_speed, elev_high, elev_low, max_heartrate, max_speed, total_elevation_gain)
-    std::optional<json> getAvgRouteStats(const std::string& path, const std::string& activityPath) {
-        std::ifstream inFile(activityPath);
+    std::optional<json> getAvgRouteStats(const std::string& idPolylinePath, const std::string& activityDataPath) {
+        std::ifstream inFile(idPolylinePath);
         if (inFile) {
             json j;
             inFile >> j;
@@ -253,11 +257,13 @@ namespace RouteUtils {
                     for (const auto& id : ids) {
                         newIds.push_back(std::to_string(id.get<long long>()));
                     }
-
-                    auto stats = getAvgActivityData(activityPath, newIds);
+                    
+                    auto stats = getAvgActivityData(activityDataPath, newIds);
                     if (!stats) continue;
                     json jStats = *stats;
                     jStats["polyline"] = route["polyline"];
+                    jStats["sport"] = sport.key();
+                    jStats["num_attempts"] = ids.size();
                     routes.push_back(jStats);
                 }
             }
