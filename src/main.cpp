@@ -100,7 +100,6 @@ void getAthleteActivities(httplib::Client& client, httplib::Headers& headers, in
 
 int main(int, char**){
     plog::init(plog::debug, "Logfile.txt");
-    PLOGD << "main called";
 
     /*httplib::Client client("https://www.strava.com");
     std::string accessToken {getValidAccessToken(client)};

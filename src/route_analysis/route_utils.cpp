@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
+#include <route_analysis/random.h>
 
 #include <iostream>
 #include <fstream>
@@ -13,6 +14,7 @@
 #include <vector>
 #include <tuple>
 #include <unordered_set>
+#include <map>
 
 
 namespace RouteUtils {
@@ -179,6 +181,7 @@ namespace RouteUtils {
                     if (!matched) {
                         PLOGD << "distinct routes found";
                         sportRoutes[sport].push_back({
+                            {"route_id", Random::generateInt(std::pow(10, 10), std::pow(10, 14))},
                             {"ids", json::array({activity["id"]})},
                             {"polyline", polyline}
                         });
@@ -240,8 +243,7 @@ namespace RouteUtils {
         return {};
     }
 
-    //write to json with average route metrics (polyline and 
-    // stats: average_cadence, average_heartrate, average_speed, elev_high, elev_low, max_heartrate, max_speed, total_elevation_gain)
+    /** writes to json with average route metrics */
     std::optional<json> getAvgRouteStats(const std::string& idPolylinePath, const std::string& activityDataPath) {
         std::ifstream inFile(idPolylinePath);
         if (inFile) {
@@ -261,6 +263,8 @@ namespace RouteUtils {
                     auto stats = getAvgActivityData(activityDataPath, newIds);
                     if (!stats) continue;
                     json jStats = *stats;
+
+                    jStats["route_id"] = route["route_id"];
                     jStats["polyline"] = route["polyline"];
                     jStats["sport"] = sport.key();
                     jStats["num_attempts"] = ids.size();
@@ -270,5 +274,58 @@ namespace RouteUtils {
             return routes;
         }
         return {};
+    }
+
+    /** Gets linearly interpolated route score based on metric weights, ignoring 0 values */
+    double getNormalizedRouteScore(const std::map<std::string, double> weights, const std::string& routeData, std::int64_t routeId) {
+        std::ifstream inFile(routeData);
+        if (inFile) {
+            json j;
+            inFile >> j;
+            inFile.close();
+
+            std::map<std::string, std::tuple<double, double>> minMaxData;
+            json routeStats {};
+            for (json::iterator route = j.begin(); route != j.end(); ++route) {
+                if (route.value()["route_id"] == routeId) {
+                    routeStats = route.value();
+                }
+
+                for (const auto& it : route.value().items()) {
+                    if (minMaxData.contains(it.key())) {
+                        auto& t = minMaxData.at(it.key());
+                        double min = std::get<0>(t);
+                        double max = std::get<1>(t);
+
+                        if (it.value() < min) {
+                            std::get<0>(t) = it.value();
+                        } else if (it.value() > max) {
+                            std::get<1>(t) = it.value();
+                        }
+                    } else {
+                        minMaxData[it.key()] = std::make_tuple(it.value(), it.value());
+                    }
+                }
+                
+            }
+
+            if (routeStats.empty()) {
+                PLOGD << "route id " << routeId << "not found in data file";
+            }
+
+            double sum = std::accumulate(weights.begin(), weights.end(), 0.0, 
+                [](double acc, const auto& dv) { return acc + dv.second; });
+
+            // use weights and min/max for interpolation
+            double rank {};
+            for (const auto& pair : weights) {
+                const auto [min, max] = minMaxData[pair.first];
+                int percent = (routeStats[pair.first] - min) / (max - min);
+                rank += percent * (pair.second / sum);
+            }
+
+            return rank;
+        }
+        return -1.0;
     }
 }
